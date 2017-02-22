@@ -20,11 +20,43 @@ func NewLatinSquare(size int) LatinSquare {
 	return LatinSquare{body}
 }
 
+func NewReducedLatinSquare(size int) LatinSquare {
+	square := NewLatinSquare(size)
+
+	for i := 0; i < len(square.body); i++ {
+		square.set(i, 0, i)
+		square.set(0, i, i)
+	}
+
+	return square
+}
+
 func (square LatinSquare) get(x, y int) int {
 	return square.body[x][y]
 }
 
+func (square LatinSquare) getFirstUnsetCoordinates() (x int, y int) {
+	for x = 0; x < len(square.body); x++ {
+		for y = 0; y < len(square.body); y++ {
+			if square.get(x, y) == -1 {
+				return
+			}
+		}
+	}
+
+	return -1, -1
+}
+
+func (square LatinSquare) isFinished() bool {
+	x, y := square.getFirstUnsetCoordinates()
+	return (x == -1 && y == -1)
+}
+
 func (square LatinSquare) getPossibilities(x, y int) []int {
+	if square.get(x, y) != -1 {
+		return []int{square.get(x, y)}
+	}
+
 	size := len(square.body)
 	var invalid, possibilities []int
 

@@ -56,7 +56,7 @@ func main() {
 
 func start(size int) <-chan LatinSquare {
 	// Create a new empty latin square.
-	square := NewLatinSquare(size)
+	square := NewReducedLatinSquare(size)
 
 	// Make the results channel what will be returned.
 	results := make(chan LatinSquare)
@@ -67,7 +67,7 @@ func start(size int) <-chan LatinSquare {
 	// Start a goroutine to start the permutation process and close
 	//   the results channel once it has finished.
 	go func() {
-		next(0, 0, square, results, wg)
+		next(square, results, wg)
 		wg.Wait()
 		close(results)
 	}()
@@ -75,33 +75,15 @@ func start(size int) <-chan LatinSquare {
 	return results
 }
 
-func next(x, y int, square LatinSquare, results chan<- LatinSquare, wg *sync.WaitGroup) {
-	// Make a copy of x and y to be manipulated.
-	// No matter what, nextX will be + 1 or reset to 0.
-	nextX := x + 1
-	nextY := y
-
-	// Check if X needs to be reset to the start of the row.
-	if nextX >= len(square.body) {
-		// Set the coordinates to the start of the next row.
-		nextX = 0
-		nextY++
-
-		// Is there even a next row though? Check for that.
-		if nextY >= len(square.body) {
-			// There isn't a next row, meaning we have the last possibilities.
-			// There should only ever be a single possibility here.
-
-			// Update the square with the only possibility.
-			square.set(x, y, square.getPossibilities(x, y)[0])
-
-			// Send it through the channel.
-			results <- square
-
-			// Return early.
-			return
-		}
+func next(square LatinSquare, results chan<- LatinSquare, wg *sync.WaitGroup) {
+	// If the square is finished, send it to the results and return.
+	if square.isFinished() {
+		results <- square
+		return
 	}
+
+	// Get the first unset coordinates.
+	x, y := square.getFirstUnsetCoordinates()
 
 	// Get the possibilities for the current coordinates.
 	possibilities := square.getPossibilities(x, y)
@@ -120,9 +102,9 @@ func next(x, y int, square LatinSquare, results chan<- LatinSquare, wg *sync.Wai
 		// Create the goroutine. Not only does this call the function
 		//   recursively, but it will also signal that it is done to the
 		//   wait group.
-		go func(nextX, nextY int, square LatinSquare) {
-			next(nextX, nextY, square, results, wg)
+		go func(square LatinSquare) {
+			next(square, results, wg)
 			wg.Done()
-		}(nextX, nextY, newSquare)
+		}(newSquare)
 	}
 }
